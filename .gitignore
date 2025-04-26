@@ -17,3 +17,6 @@ env/
 
 .DS_Store
 Thumbs.db
+
+# Ignore API response files
+workday_response.json
