@@ -20,3 +20,9 @@ Thumbs.db
 
 # Ignore API response files
 workday_response.json
+test_response.json
+facets.json
+
+# Ignore test files
+test.py
+facet_fields.txt
