@@ -1,5 +1,6 @@
 import requests
 import json
+import time
 
 # --- Configurations ---
 URL = "https://mtb.wd5.myworkdayjobs.com/wday/cxs/mtb/MTB/jobs"
@@ -13,6 +14,8 @@ TARGET_LOCATIONS = [
     "Remote, USA",
     "Buffalo, NY"
 ]
+LIMIT = 20
+OFFSET = 0 
 
 # --- Function to Find Location IDs ---
 # --- Function to Find ID by Descriptor (General Purpose) ---
@@ -84,28 +87,49 @@ if __name__ == "__main__":
             exit()
 
         # --- Build Final Payload ---
-        final_payload = {
-            "limit": 10,
-            "offset": 0,
-            "appliedFacets": {
-                "locations": location_ids
-            },
-            "searchText": "sql"
-        }
+        jobs_list = []
 
-        # --- Fetch Jobs using dynamic location IDs ---
-        response = requests.post(URL, headers=HEADERS, json=final_payload)
+        while True:
+            final_payload = {
+                "limit": LIMIT,
+                "offset": OFFSET,
+                "appliedFacets": {
+                    "locations": location_ids
+                },
+                "searchText": "sql"
+            }
 
-        if response.status_code == 200:
-            jobs_data = response.json().get("jobPostings", [])
+            # --- Fetch Jobs using dynamic location IDs ---
+            response = requests.post(URL, headers=HEADERS, json=final_payload)
 
-            # Write full job response to file
-            with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-                json.dump(jobs_data, f, indent=4)
+            if response.status_code == 200:
+                jobs_data = response.json().get("jobPostings", [])
 
-            print(f"Filtered job response saved to {OUTPUT_FILE}")
-        else:
-            print(f"Failed to fetch jobs with filters: {response.status_code}")
+                if not jobs_data:
+                    print("No more jobs found. Exiting pagination.")
+                    break
+
+                jobs_list.extend(jobs_data)
+
+                print(f"Fetched {len(jobs_data)} jobs at offset {OFFSET}...")
+
+                if len(jobs_data) < LIMIT:
+                    # Less than requested, end of available data
+                    print("Reached last page.")
+                    break
+                
+                OFFSET += LIMIT
+
+                time.sleep(0.5)
+
+            else:
+                print(f"Failed to fetch jobs with filters: {response.status_code}")
+                break
+
+        # Write full job response to file        
+        with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
+            json.dump(jobs_list, f, indent=4)
+        print(f"Filtered job response saved to {OUTPUT_FILE}")
 
     else:
         print(f"Failed to fetch initial facets: {response.status_code}")
