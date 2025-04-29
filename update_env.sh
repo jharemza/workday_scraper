@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# >>> Conda initialize (adjust path if needed) >>>
+__conda_setup="$('C:/Users/ubiqu/anaconda3/Scripts/conda.exe' 'shell.bash' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    export PATH="C:/Users/ubiqu/anaconda3/bin:$PATH"
+fi
+unset __conda_setup
+# <<< Conda initialize <<<
+
 ENV_NAME="workday_scraper"
 DATE_TAG=$(date +"%Y-%m-%d_%H-%M-%S")
 LOG_DIR="env_logs"
