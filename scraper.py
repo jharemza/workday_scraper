@@ -87,7 +87,7 @@ if __name__ == "__main__":
             exit()
 
         # --- Build Final Payload ---
-        jobs_urls = []
+        job_urls = []
 
         while True:
             final_payload = {
@@ -103,13 +103,17 @@ if __name__ == "__main__":
             response = requests.post(URL, headers=HEADERS, json=final_payload)
 
             if response.status_code == 200:
-                jobs_data = [job.get("externalPath") for job in response.json().get("jobPostings", []) if "externalPath" in job]
+                jobs_data = [
+                    f"https://mtb.wd5.myworkdayjobs.com/wday/cxs/mtb/MTB/job/{job.get('externalPath', '').split('/')[-1]}"
+                    for job in response.json().get("jobPostings", [])
+                    if "externalPath" in job
+                    ]
 
                 if not jobs_data:
                     print("No more jobs found. Exiting pagination.")
                     break
 
-                jobs_urls.extend(jobs_data)
+                job_urls.extend(jobs_data)
 
                 print(f"Fetched {len(jobs_data)} jobs at offset {OFFSET}...")
 
@@ -128,7 +132,7 @@ if __name__ == "__main__":
 
         # Write full job response to file        
         with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-            json.dump(jobs_urls, f, indent=4)
+            json.dump(job_urls, f, indent=4)
         print(f"Filtered job response saved to {OUTPUT_FILE}")
 
     else:
