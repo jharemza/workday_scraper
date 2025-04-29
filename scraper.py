@@ -86,7 +86,7 @@ if __name__ == "__main__":
             print("No matching locations found. Exiting.")
             exit()
 
-        # --- Build Final Payload ---
+        # --- Job List Payload ---
         job_urls = []
 
         while True:
@@ -129,10 +129,31 @@ if __name__ == "__main__":
             else:
                 print(f"Failed to fetch jobs with filters: {response.status_code}")
                 break
+        
+        # --- Job URL Loop ---
+        fetched_job_postings = []
+
+        for idx, url in enumerate(job_urls):
+            try:
+                response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+                if response.status_code == 200:
+                    job_posting_info = response.json().get("jobPostingInfo", None)
+                    if job_posting_info:
+                        fetched_job_postings.append(job_posting_info)
+                        print(f"Fetched jobPostingInfo from {url} ({idx+1}/{len(job_urls)})")
+                    else:
+                        print(f"No jobPostingInfo found in {url}")
+                else:
+                    print(f"Failed to fetch {url} — Status Code: {response.status_code}")
+            except Exception as e:
+                print(f"Exception fetching {url}: {str(e)}")
+
+            time.sleep(0.5)  # Polite crawling
+
 
         # Write full job response to file        
         with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-            json.dump(job_urls, f, indent=4)
+            json.dump(fetched_job_postings, f, indent=4)
         print(f"Filtered job response saved to {OUTPUT_FILE}")
 
     else:
