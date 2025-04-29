@@ -1,6 +1,8 @@
 import requests
 import json
 import time
+import os
+from dotenv import load_dotenv
 
 # --- Configurations ---
 URL = "https://mtb.wd5.myworkdayjobs.com/wday/cxs/mtb/MTB/jobs"
@@ -16,6 +18,14 @@ TARGET_LOCATIONS = [
 ]
 LIMIT = 20
 OFFSET = 0 
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Access them
+
+NOTION_TOKEN = os.getenv("NOTION_TOKEN")
+DATABASE_ID = os.getenv("DATABASE_ID")
 
 # --- Function to Find Location IDs ---
 # --- Function to Find ID by Descriptor (General Purpose) ---
