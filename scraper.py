@@ -22,10 +22,17 @@ OFFSET = 0
 # Load environment variables from .env file
 load_dotenv()
 
-# Access them
+# Notion Variables
 
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 DATABASE_ID = os.getenv("DATABASE_ID")
+
+NOTION_API_URL = "https://api.notion.com/v1/pages"
+HEADERS = {
+    "Authorization": f"Bearer {NOTION_TOKEN}",
+    "Content-Type": "application/json",
+    "Notion-Version": "2022-06-28"
+}
 
 # --- Function to Find Location IDs ---
 # --- Function to Find ID by Descriptor (General Purpose) ---
@@ -66,6 +73,49 @@ def find_id_by_descriptor(facets, target_descriptor):
                     return found_facet_parameter, found_id
 
     return None, None
+
+# --- Notion Mapping Function ---
+
+def create_notion_page(job, notion_token, database_id):
+    url = "https://api.notion.com/v1/pages"
+    headers = {
+        "Authorization": f"Bearer {notion_token}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+    }
+
+    payload = {
+        "parent": { "database_id": database_id },
+        "properties": {
+            "Title": {
+                "title": [
+                    { "text": { "content": job.get("title", "Untitled") } }
+                ]
+            },
+            "Location": {
+                "rich_text": [
+                    { "text": { "content": job.get("location", "") } }
+                ]
+            },
+            "Start Date": {
+                "date": {
+                    "start": job.get("startDate", None)
+                }
+            },
+            "Job ID": {
+                "rich_text": [
+                    { "text": { "content": job.get("jobReqId", "") } }
+                ]
+            },
+            "External URL": {
+                "url": job.get("externalUrl", "")
+            }
+        }
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    return response.status_code, response.text
+
 
 # --- Main Execution ---
 if __name__ == "__main__":
