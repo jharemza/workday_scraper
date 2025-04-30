@@ -2,7 +2,9 @@ import requests
 import json
 import time
 import os
+import re
 from dotenv import load_dotenv
+from datetime import datetime
 
 # --- Configurations ---
 URL = "https://mtb.wd5.myworkdayjobs.com/wday/cxs/mtb/MTB/jobs"
@@ -28,7 +30,7 @@ NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 DATABASE_ID = os.getenv("DATABASE_ID")
 
 NOTION_API_URL = "https://api.notion.com/v1/pages"
-HEADERS = {
+NOTION_HEADERS = {
     "Authorization": f"Bearer {NOTION_TOKEN}",
     "Content-Type": "application/json",
     "Notion-Version": "2022-06-28"
@@ -74,48 +76,65 @@ def find_id_by_descriptor(facets, target_descriptor):
 
     return None, None
 
-# --- Notion Mapping Function ---
+# --- Notion Functions ---
+def extract_salary_range(description):
+    """
+    Extracts salary range (low, high) as floats from jobDescription HTML text.
+    """
+    match = re.search(r"\$([\d,]+)\s*-\s*\$([\d,]+)", description.replace(",", ""))
+    if match:
+        low = float(match.group(1))
+        high = float(match.group(2))
+        return low, high
+    return None, None
 
-def create_notion_page(job, notion_token, database_id):
-    url = "https://api.notion.com/v1/pages"
-    headers = {
-        "Authorization": f"Bearer {notion_token}",
-        "Content-Type": "application/json",
-        "Notion-Version": "2022-06-28"
-    }
+def create_notion_payload(job):
+    # Extract salary
+    description = job.get("jobDescription", "")
+    base_pay_low, base_pay_high = extract_salary_range(description)
+    app_end_date = job.get("endDate", datetime(datetime.today().year, 12, 31).date().isoformat())
 
-    payload = {
-        "parent": { "database_id": database_id },
+    NOTION_PAYLOAD = {
+        "parent": { "database_id": DATABASE_ID },
         "properties": {
-            "Title": {
+            "Company": {
                 "title": [
+                    { "text": { "content": "M & T Bank" } }
+                ]
+            },
+            "Position": {
+                "rich_text": [
                     { "text": { "content": job.get("title", "Untitled") } }
                 ]
             },
-            "Location": {
-                "rich_text": [
-                    { "text": { "content": job.get("location", "") } }
-                ]
-            },
-            "Start Date": {
-                "date": {
-                    "start": job.get("startDate", None)
-                }
-            },
-            "Job ID": {
+            "Req ID": {
                 "rich_text": [
                     { "text": { "content": job.get("jobReqId", "") } }
                 ]
             },
-            "External URL": {
+            "Job Posting URL": {
                 "url": job.get("externalUrl", "")
+            },
+            "Stage": {
+                "status": {
+                    "name": "Ready to apply"
+                }
+            },
+            "Base Pay Low": {
+                "number": base_pay_low
+            },
+            "Base Pay High": {
+                "number": base_pay_high
+            },
+            "Application Deadline": {
+                "date": {
+                    "start": app_end_date
+                }
             }
         }
     }
 
-    response = requests.post(url, headers=headers, json=payload)
-    return response.status_code, response.text
-
+    return NOTION_PAYLOAD
 
 # --- Main Execution ---
 if __name__ == "__main__":
@@ -210,6 +229,20 @@ if __name__ == "__main__":
 
             time.sleep(0.5)  # Polite crawling
 
+        # --- Notion Mapping + Upload ---
+        for job in fetched_job_postings:
+            try:
+                NOTION_PAYLOAD = create_notion_payload(job)  # This builds the page payload from a job dictionary
+                notion_response = requests.post(NOTION_API_URL, headers=NOTION_HEADERS, json=NOTION_PAYLOAD)
+
+                if notion_response.status_code == 200:
+                    print(f"[INFO] Job '{job.get('title')}' added to Notion.")
+                else:
+                    print(f"[ERROR] Failed to add '{job.get('title')}' — {notion_response.status_code}: {notion_response.text}")
+
+                time.sleep(0.5)  # Respectful delay to avoid rate limits
+            except Exception as e:
+                print(f"[EXCEPTION] Error processing job '{job.get('title')}': {str(e)}")
 
         # Write full job response to file        
         with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
