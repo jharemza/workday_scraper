@@ -26,3 +26,7 @@ facets.json
 # Ignore test files
 test.py
 facet_fields.txt
+
+# Ignore log files
+scraper.log
+ 

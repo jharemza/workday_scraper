@@ -5,6 +5,31 @@ import os
 import re
 from dotenv import load_dotenv
 from datetime import datetime
+import logging
+from logging.handlers import RotatingFileHandler
+
+# --- Logging Setup ---
+# Create rotating file handler (max 5MB per file, keep 5 backups)
+file_handler = RotatingFileHandler(
+    "scraper.log", maxBytes=5_000_000, backupCount=5, encoding='utf-8'
+)
+file_handler.setLevel(logging.INFO)  # or DEBUG for full verbosity
+
+# Create console handler (logs only WARNING+ to console)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.WARNING)  # WARNING and ERROR only
+
+# Formatter for both
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+# Root logger config — no need to set handlers in basicConfig when doing it manually
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)  # This is the *global* threshold
+logger.handlers = []  # Clear any default handlers (if re-running interactively)
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
 # --- Configurations ---
 URL = "https://mtb.wd5.myworkdayjobs.com/wday/cxs/mtb/MTB/jobs"
@@ -91,10 +116,10 @@ def extract_salary_range(description):
             high = float(high_str)
             return low, high
         except ValueError:
-            print(f"[DEBUG] Float conversion failed: low='{low_str}', high='{high_str}'")
+            logging.debug(f"Float conversion failed: low='{low_str}', high='{high_str}'")
             return None, None
     else:
-        print("[DEBUG] Salary pattern not found in job description.")
+        logging.debug("Salary pattern not found in job description.")
         return None, None
 
 def create_notion_payload(job):
@@ -103,7 +128,7 @@ def create_notion_payload(job):
     base_pay_low, base_pay_high = extract_salary_range(description)
 
     # TEMP debug output
-    print(f"[DEBUG] Extracted base pay: Low = {base_pay_low}, High = {base_pay_high}")
+    logging.debug(f"Extracted base pay: Low = {base_pay_low}, High = {base_pay_high}")
 
     app_end_date = job.get("endDate", datetime(datetime.today().year, 12, 31).date().isoformat())
 
@@ -184,7 +209,7 @@ def fetch_existing_req_ids(database_id, company_filter=None):
         )
 
         if response.status_code != 200:
-            print(f"[ERROR] Failed to query Notion database {database_id}: {response.text}")
+            logging.error(f"Failed to query Notion database {database_id}: {response.text}")
             break
 
         data = response.json()
@@ -221,13 +246,13 @@ if __name__ == "__main__":
         for location in TARGET_LOCATIONS:
             facet_param, location_id = find_id_by_descriptor(facets, location)
             if location_id:
-                print(f"Found: {location} → FacetParameter: {facet_param} → ID: {location_id}")
+                logging.info(f"Found: {location} → FacetParameter: {facet_param} → ID: {location_id}")
                 location_ids.append(location_id)
             else:
-                print(f"Warning: {location} not found in facets.")
+                logging.warning(f"{location} not found in facets.")
 
         if not location_ids:
-            print("No matching locations found. Exiting.")
+            logging.error("No matching locations found. Exiting.")
             exit()
 
         # --- Job List Payload ---
@@ -254,16 +279,16 @@ if __name__ == "__main__":
                     ]
 
                 if not jobs_data:
-                    print("No more jobs found. Exiting pagination.")
+                    logging.info("No more jobs found. Exiting pagination.")
                     break
 
                 job_urls.extend(jobs_data)
 
-                print(f"Fetched {len(jobs_data)} jobs at offset {OFFSET}...")
+                logging.info(f"Fetched {len(jobs_data)} jobs at offset {OFFSET}...")
 
                 if len(jobs_data) < LIMIT:
                     # Less than requested, end of available data
-                    print("Reached last page.")
+                    logging.info("Reached last page.")
                     break
                 
                 OFFSET += LIMIT
@@ -271,7 +296,7 @@ if __name__ == "__main__":
                 time.sleep(0.5)
 
             else:
-                print(f"Failed to fetch jobs with filters: {response.status_code}")
+                logging.error(f"Failed to fetch jobs with filters: {response.status_code}")
                 break
         
         # --- Job URL Loop ---
@@ -284,28 +309,28 @@ if __name__ == "__main__":
                     job_posting_info = response.json().get("jobPostingInfo", None)
                     if job_posting_info:
                         fetched_job_postings.append(job_posting_info)
-                        print(f"Fetched jobPostingInfo from {url} ({idx+1}/{len(job_urls)})")
+                        logging.info(f"Fetched jobPostingInfo from {url} ({idx+1}/{len(job_urls)})")
                     else:
-                        print(f"No jobPostingInfo found in {url}")
+                        logging.error(f"No jobPostingInfo found in {url}")
                 else:
-                    print(f"Failed to fetch {url} — Status Code: {response.status_code}")
+                    logging.error(f"Failed to fetch {url} — Status Code: {response.status_code}")
             except Exception as e:
-                print(f"Exception fetching {url}: {str(e)}")
+                logging.error(f"Exception fetching {url}: {str(e)}")
 
             time.sleep(0.5)  # Polite crawling
 
         # Collect existing Req IDs
-        print("Fetching existing Req IDs from Notion databases...")
+        logging.info("Fetching existing Req IDs from Notion databases...")
         existing_ids_db = fetch_existing_req_ids(DATABASE_ID)
         existing_ids_applied = fetch_existing_req_ids(APPLIED_DATABASE_ID, company_filter="M & T Bank")
         existing_req_ids = existing_ids_db.union(existing_ids_applied)
-        print(f"Found {len(existing_req_ids)} total existing Req IDs.")
+        logging.info(f"Found {len(existing_req_ids)} total existing Req IDs.")
 
         # --- Notion Mapping + Upload ---
         for job in fetched_job_postings:
             job_req_id = job.get("jobReqId", "").strip()
             if job_req_id in existing_req_ids:
-                print(f"[SKIP] Req ID {job_req_id} already exists. Skipping.")
+                logging.info(f"[SKIP] Req ID {job_req_id} already exists. Skipping.")
                 continue
 
             try:
@@ -313,18 +338,18 @@ if __name__ == "__main__":
                 notion_response = requests.post(NOTION_API_URL, headers=NOTION_HEADERS, json=NOTION_PAYLOAD)
 
                 if notion_response.status_code == 200:
-                    print(f"[INFO] Job '{job.get('title')}' added to Notion.")
+                    logging.info(f"Job '{job.get('title')}' added to Notion.")
                 else:
-                    print(f"[ERROR] Failed to add '{job.get('title')}' — {notion_response.status_code}: {notion_response.text}")
+                    logging.error(f"Failed to add '{job.get('title')}' — {notion_response.status_code}: {notion_response.text}")
 
                 time.sleep(0.5)  # Respectful delay to avoid rate limits
             except Exception as e:
-                print(f"[EXCEPTION] Error processing job '{job.get('title')}': {str(e)}")
+                logging.error(f"Failed processing job '{job.get('title')}': {str(e)}")
 
         # Write full job response to file        
         with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
             json.dump(fetched_job_postings, f, indent=4)
-        print(f"Filtered job response saved to {OUTPUT_FILE}")
+        logging.info(f"Filtered job response saved to {OUTPUT_FILE}")
 
     else:
-        print(f"Failed to fetch initial facets: {response.status_code}")
+        logging.error(f"Failed to fetch initial facets: {response.status_code}")
