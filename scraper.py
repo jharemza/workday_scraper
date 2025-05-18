@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler
+from tqdm import tqdm
 
 # --- Logging Setup ---
 # Create rotating file handler (max 5MB per file, keep 5 backups)
@@ -243,7 +244,7 @@ if __name__ == "__main__":
 
         # Find IDs dynamically for all TARGET_LOCATIONS
         location_ids = []
-        for location in TARGET_LOCATIONS:
+        for location in tqdm(TARGET_LOCATIONS, desc="Location facets", unit="location"):
             facet_param, location_id = find_id_by_descriptor(facets, location)
             if location_id:
                 logging.info(f"Found: {location} → FacetParameter: {facet_param} → ID: {location_id}")
@@ -258,6 +259,8 @@ if __name__ == "__main__":
         # --- Job List Payload ---
         job_urls = []
 
+        total_jobs_found = 0
+        page_pbar = tqdm(desc="Pages scraped", unit="page")
         while True:
             final_payload = {
                 "limit": LIMIT,
@@ -274,9 +277,11 @@ if __name__ == "__main__":
             if response.status_code == 200:
                 jobs_data = [
                     f"https://mtb.wd5.myworkdayjobs.com/wday/cxs/mtb/MTB/job/{job.get('externalPath', '').split('/')[-1]}"
-                    for job in response.json().get("jobPostings", [])
+                    for job in tqdm(response.json().get("jobPostings", []), desc="Jobs data", unit="job")
                     if "externalPath" in job
                     ]
+                
+                total_jobs_found += len(jobs_data)
 
                 if not jobs_data:
                     logging.info("No more jobs found. Exiting pagination.")
@@ -298,11 +303,16 @@ if __name__ == "__main__":
             else:
                 logging.error(f"Failed to fetch jobs with filters: {response.status_code}")
                 break
+
+            page_pbar.update(1)
         
+        tqdm.write(f"🔍 Total job URLs collected: {total_jobs_found}")
+        tqdm.write(f"📄 Total pages scraped: {page_pbar.n}")
+
         # --- Job URL Loop ---
         fetched_job_postings = []
 
-        for idx, url in enumerate(job_urls):
+        for idx, url in tqdm(enumerate(job_urls), total=len(job_urls), desc="Fetching job data", unit="job"):
             try:
                 response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
                 if response.status_code == 200:
@@ -327,10 +337,15 @@ if __name__ == "__main__":
         logging.info(f"Found {len(existing_req_ids)} total existing Req IDs.")
 
         # --- Notion Mapping + Upload ---
-        for job in fetched_job_postings:
+        success_count = 0
+        skipped_count = 0
+        error_count = 0
+
+        for job in tqdm(fetched_job_postings, desc="Notion Upload", unit="job"):
             job_req_id = job.get("jobReqId", "").strip()
             if job_req_id in existing_req_ids:
                 logging.info(f"[SKIP] Req ID {job_req_id} already exists. Skipping.")
+                skipped_count += 1
                 continue
 
             try:
@@ -338,13 +353,22 @@ if __name__ == "__main__":
                 notion_response = requests.post(NOTION_API_URL, headers=NOTION_HEADERS, json=NOTION_PAYLOAD)
 
                 if notion_response.status_code == 200:
+                    success_count += 1
                     logging.info(f"Job '{job.get('title')}' added to Notion.")
                 else:
+                    error_count += 1
                     logging.error(f"Failed to add '{job.get('title')}' — {notion_response.status_code}: {notion_response.text}")
 
                 time.sleep(0.5)  # Respectful delay to avoid rate limits
             except Exception as e:
+                error_count += 1
                 logging.error(f"Failed processing job '{job.get('title')}': {str(e)}")
+
+        tqdm.write(f"\n📊 Notion Upload Summary:")
+        tqdm.write(f"  ✅ Success     : {success_count}")
+        tqdm.write(f"  🟡 Skipped     : {skipped_count}")
+        tqdm.write(f"  🔴 Failed      : {error_count}")
+        tqdm.write(f"  📦 Total jobs  : {len(fetched_job_postings)}")
 
         # Write full job response to file        
         with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
