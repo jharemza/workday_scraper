@@ -28,6 +28,7 @@ load_dotenv()
 
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 DATABASE_ID = os.getenv("DATABASE_ID")
+APPLIED_DATABASE_ID = os.getenv("APPLIED_DATABASE_ID")
 
 NOTION_API_URL = "https://api.notion.com/v1/pages"
 NOTION_HEADERS = {
@@ -136,6 +137,58 @@ def create_notion_payload(job):
 
     return NOTION_PAYLOAD
 
+def fetch_existing_req_ids(database_id, company_filter=None):
+    """
+    Fetches all Req IDs from the given Notion database.
+    Optionally filters by Company name if `company_filter` is provided.
+
+    Raises:
+        ValueError if filtering is required but not supplied.
+    """
+    if database_id == APPLIED_DATABASE_ID and not company_filter:
+        raise ValueError("Company filter must be provided when querying APPLIED_DATABASE_ID")
+
+    existing_ids = set()
+    has_more = True
+    next_cursor = None
+
+    while has_more:
+        payload = {"page_size": 100}
+        if next_cursor:
+            payload["start_cursor"] = next_cursor
+
+        if company_filter:
+            payload["filter"] = {
+                "property": "Company",
+                "rich_text": {
+                    "equals": company_filter
+                }
+            }
+
+        response = requests.post(
+            f"https://api.notion.com/v1/databases/{database_id}/query",
+            headers=NOTION_HEADERS,
+            json=payload
+        )
+
+        if response.status_code != 200:
+            print(f"[ERROR] Failed to query Notion database {database_id}: {response.text}")
+            break
+
+        data = response.json()
+        for result in data.get("results", []):
+            props = result.get("properties", {})
+            req_id_obj = props.get("Req ID", {}).get("rich_text", [])
+            if req_id_obj:
+                req_id = req_id_obj[0].get("text", {}).get("content", "").strip()
+                if req_id:
+                    existing_ids.add(req_id)
+
+        has_more = data.get("has_more", False)
+        next_cursor = data.get("next_cursor")
+
+    return existing_ids
+
 # --- Main Execution ---
 if __name__ == "__main__":
     # Initial fetch to get facets
@@ -229,8 +282,20 @@ if __name__ == "__main__":
 
             time.sleep(0.5)  # Polite crawling
 
+        # Collect existing Req IDs
+        print("Fetching existing Req IDs from Notion databases...")
+        existing_ids_db = fetch_existing_req_ids(DATABASE_ID)
+        existing_ids_applied = fetch_existing_req_ids(APPLIED_DATABASE_ID, company_filter="M & T Bank")
+        existing_req_ids = existing_ids_db.union(existing_ids_applied)
+        print(f"Found {len(existing_req_ids)} total existing Req IDs.")
+
         # --- Notion Mapping + Upload ---
         for job in fetched_job_postings:
+            job_req_id = job.get("jobReqId", "").strip()
+            if job_req_id in existing_req_ids:
+                print(f"[SKIP] Req ID {job_req_id} already exists. Skipping.")
+                continue
+
             try:
                 NOTION_PAYLOAD = create_notion_payload(job)  # This builds the page payload from a job dictionary
                 notion_response = requests.post(NOTION_API_URL, headers=NOTION_HEADERS, json=NOTION_PAYLOAD)
