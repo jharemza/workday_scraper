@@ -82,17 +82,29 @@ def extract_salary_range(description):
     """
     Extracts salary range (low, high) as floats from jobDescription HTML text.
     """
-    match = re.search(r"\$([\d,]+)\s*-\s*\$([\d,]+)", description.replace(",", ""))
+    match = re.search(r"\$([\d,]+(?:\.\d{2})?)\s*-\s*\$([\d,]+(?:\.\d{2})?)", description)
     if match:
-        low = float(match.group(1))
-        high = float(match.group(2))
-        return low, high
-    return None, None
+        low_str = match.group(1).replace(",", "")
+        high_str = match.group(2).replace(",", "")
+        try:
+            low = float(low_str)
+            high = float(high_str)
+            return low, high
+        except ValueError:
+            print(f"[DEBUG] Float conversion failed: low='{low_str}', high='{high_str}'")
+            return None, None
+    else:
+        print("[DEBUG] Salary pattern not found in job description.")
+        return None, None
 
 def create_notion_payload(job):
     # Extract salary
     description = job.get("jobDescription", "")
     base_pay_low, base_pay_high = extract_salary_range(description)
+
+    # TEMP debug output
+    print(f"[DEBUG] Extracted base pay: Low = {base_pay_low}, High = {base_pay_high}")
+
     app_end_date = job.get("endDate", datetime(datetime.today().year, 12, 31).date().isoformat())
 
     NOTION_PAYLOAD = {
