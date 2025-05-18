@@ -8,6 +8,7 @@ from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler
 from tqdm import tqdm
+import html2text
 
 # --- Logging Setup ---
 # Create rotating file handler (max 5MB per file, keep 5 backups)
@@ -227,6 +228,51 @@ def fetch_existing_req_ids(database_id, company_filter=None):
 
     return existing_ids
 
+def html_to_notion_blocks(html_text):
+    """
+    Converts HTML jobDescription into a list of Notion-compatible paragraph blocks.
+    """
+    md = html2text.html2text(html_text)
+
+    blocks = []
+    for line in md.strip().splitlines():
+        blocks.append({
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {
+                "rich_text": [{
+                    "type": "text",
+                    "text": {
+                        "content": line
+                    }
+                }]
+            }
+        })
+
+    return blocks
+
+def append_job_description_to_page(page_id, html_description):
+    blocks = html_to_notion_blocks(html_description)
+
+    max_batch_size = 100
+    for i in range(0, len(blocks), max_batch_size):
+        chunk = blocks[i:i + max_batch_size]
+
+        response = requests.patch(
+            f"https://api.notion.com/v1/blocks/{page_id}/children",
+            headers=NOTION_HEADERS,
+            json={"children": chunk}
+        )
+
+        if response.status_code == 200:
+            logging.info(f"Appended block chunk to page {page_id} ({i + len(chunk)}/{len(blocks)})")
+        else:
+            logging.error(f"Failed to append chunk to page {page_id}: {response.status_code} — {response.text}")
+            break
+
+        time.sleep(0.2)  # Polite batching
+
+
 # --- Main Execution ---
 if __name__ == "__main__":
     # Initial fetch to get facets
@@ -355,11 +401,21 @@ if __name__ == "__main__":
                 if notion_response.status_code == 200:
                     success_count += 1
                     logging.info(f"Job '{job.get('title')}' added to Notion.")
+
+                    # ✅ Get Notion page ID from creation response
+                    new_page_id = notion_response.json().get("id")
+
+                    # ✅ Append jobDescription as page body content
+                    html_desc = job.get("jobDescription", "")
+                    if html_desc:
+                        append_job_description_to_page(new_page_id, html_desc)
+
                 else:
                     error_count += 1
                     logging.error(f"Failed to add '{job.get('title')}' — {notion_response.status_code}: {notion_response.text}")
 
                 time.sleep(0.5)  # Respectful delay to avoid rate limits
+
             except Exception as e:
                 error_count += 1
                 logging.error(f"Failed processing job '{job.get('title')}': {str(e)}")
