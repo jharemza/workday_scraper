@@ -7,6 +7,12 @@ import re
 import logging
 import requests
 
+__all__ = [
+    "create_notion_payload",
+    "fetch_existing_req_ids",
+    "append_job_description_to_page"
+]
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -167,9 +173,3 @@ def append_job_description_to_page(page_id, html_description):
             break
 
         time.sleep(0.2)  # Polite batching
-
-__all__ = [
-    "create_notion_payload",
-    "fetch_existing_req_ids",
-    "append_job_description_to_page"
-]
