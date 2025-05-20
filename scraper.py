@@ -189,7 +189,7 @@ if __name__ == "__main__":
         # Collect existing Req IDs
         logging.info("Fetching existing Req IDs from Notion databases...")
         existing_ids_db = nc.fetch_existing_req_ids(nc.DATABASE_ID)
-        existing_ids_applied = nc.fetch_existing_req_ids(nc.APPLIED_DATABASE_ID, company_filter="M & T Bank")
+        existing_ids_applied = nc.fetch_existing_req_ids(nc.APPLIED_DATABASE_ID, company_filter="M&T Bank")
         existing_req_ids = existing_ids_db.union(existing_ids_applied)
         logging.info(f"Found {len(existing_req_ids)} total existing Req IDs.")
 

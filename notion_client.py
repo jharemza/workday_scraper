@@ -64,7 +64,7 @@ def create_notion_payload(job):
         "properties": {
             "Company": {
                 "title": [
-                    { "text": { "content": "M & T Bank" } }
+                    { "text": { "content": "M&T Bank" } }
                 ]
             },
             "Position": {
