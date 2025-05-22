@@ -22,6 +22,7 @@ Thumbs.db
 workday_response.json
 test_response.json
 facets.json
+json_output/*.json
 
 # Ignore test files
 test.py
