@@ -40,16 +40,19 @@ def find_id_by_descriptor(facets, target_descriptor):
 
     return None, None
 
+def log_with_prefix(level, company_name, message):
+    getattr(logging, level)(f"[{company_name}] {message}")
+
 def run_institution_scraper(institution: dict):
     """Run scraping and Notion writing for a single institution."""
 
-    logging.info(f"🏁 Starting scrape for {institution['name']}")
-    
     # 1. Set local vars from config
     url = institution["workday_url"]
     locations = institution["locations"]
     search_text = institution["search_text"]
     company_name = institution["name"]
+
+    log_with_prefix("info", company_name, f"🏁 Starting scrape.")
 
     # 2. Initial fetch for facets
     initial_payload = {
@@ -61,7 +64,7 @@ def run_institution_scraper(institution: dict):
 
     response = requests.post(url, json=initial_payload, headers={"Content-Type": "application/json"})
     if response.status_code != 200:
-        logging.error(f"Failed to fetch facets for {company_name}")
+        log_with_prefix("error", company_name, f"Failed to fetch facets.")
         return
 
     facets = response.json().get("facets", [])
@@ -72,10 +75,10 @@ def run_institution_scraper(institution: dict):
         if loc_id:
             location_ids.append(loc_id)
         else:
-            logging.warning(f"{company_name}: Location '{loc}' not found in facets.")
+            log_with_prefix("error", company_name, f"Location '{loc}' not found in facets.")
 
     if not location_ids:
-        logging.warning(f"{company_name}: No location IDs found. Skipping.")
+        log_with_prefix("warning", company_name, f"No location IDs found. Skipping.")
         return
 
     # 3. Job collection
@@ -97,7 +100,7 @@ def run_institution_scraper(institution: dict):
         response = requests.post(url, json=job_payload, headers={"Content-Type": "application/json"})
 
         if response.status_code != 200:
-            logging.error(f"{company_name}: Failed to fetch jobs")
+            log_with_prefix("error", company_name, f"Failed to fetch jobs.")
             break
 
         jobs = response.json().get("jobPostings", [])
@@ -135,23 +138,23 @@ def run_institution_scraper(institution: dict):
                 if job_data:
                     job_postings.append(job_data)
         except Exception as e:
-            logging.error(f"{company_name}: Exception fetching job {url}: {str(e)}")
+            log_with_prefix("error", company_name, f"Exception fetching job {url}: {str(e)}")
 
         time.sleep(0.5)
 
     # 5. Deduplication
-    logging.info("Fetching existing Req IDs from Notion databases...")
+    log_with_prefix("info", company_name, "Fetching existing Req IDs from Notion databases...")
     existing_ids_main = nc.fetch_existing_req_ids(nc.DATABASE_ID, company_filter=company_name)
     existing_ids_applied = nc.fetch_existing_req_ids(nc.APPLIED_DATABASE_ID, company_filter=company_name)
     existing_req_ids = existing_ids_main.union(existing_ids_applied)
-    logging.info(f"Found {len(existing_req_ids)} total existing Req IDs.")
+    log_with_prefix("info", company_name, f"Found {len(existing_req_ids)} total existing Req IDs.")
 
     # 6. Notion upload
     success, skipped, failed = 0, 0, 0
     for job in tqdm(job_postings, desc=f"{company_name}: Notion Upload", unit="job"):
         req_id = job.get("jobReqId", "").strip()
         if req_id in existing_req_ids:
-            logging.info(f"[SKIP] {company_name}: Req ID {req_id} already exists. Skipping.")
+            log_with_prefix("info", company_name, f"Req ID {req_id} already exists. Skipping.")
             skipped += 1
             continue
 
@@ -161,7 +164,7 @@ def run_institution_scraper(institution: dict):
 
             if notion_response.status_code == 200:
                 success += 1
-                logging.info(f"{company_name}: Job '{job.get('title')}' added to Notion.")
+                log_with_prefix("info", company_name, f"Job '{job.get('title')}' added to Notion.")
 
                 # ✅ Get Notion page ID from creation response
                 new_page_id = notion_response.json().get("id")
@@ -173,11 +176,11 @@ def run_institution_scraper(institution: dict):
 
             else:
                 failed += 1
-                logging.error(f"{company_name}: Failed to upload job '{job.get('title')}' — {notion_response.status_code}: {notion_response.text}")
+                log_with_prefix("error", company_name, f"Failed to upload job '{job.get('title')}' — {notion_response.status_code}: {notion_response.text}")
 
         except Exception as e:
             failed += 1
-            logging.error(f"{company_name}: Error uploading job '{job.get('title')}': {str(e)}")
+            log_with_prefix("error", company_name, f"Error uploading job '{job.get('title')}': {str(e)}")
 
         time.sleep(0.5)
 
