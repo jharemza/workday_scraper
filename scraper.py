@@ -5,6 +5,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 from tqdm import tqdm
 import notion_client as nc
+from config_loader import load_institutions_config
 
 # --- Logging Setup ---
 # Create rotating file handler (max 5MB per file, keep 5 backups)
@@ -30,17 +31,15 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
 # --- Configurations ---
-URL = "https://mtb.wd5.myworkdayjobs.com/wday/cxs/mtb/MTB/jobs"
+institution = load_institutions_config()[0]
+URL = institution["workday_url"]
 HEADERS = {
     "Content-Type": "application/json"
 }
 OUTPUT_FILE = "workday_response.json"
 
 # --- Desired Locations by Descriptor Name ---
-TARGET_LOCATIONS = [
-    "Remote, USA",
-    "Buffalo, NY"
-]
+TARGET_LOCATIONS = institution["locations"]
 LIMIT = 20
 OFFSET = 0 
 
@@ -189,7 +188,7 @@ if __name__ == "__main__":
         # Collect existing Req IDs
         logging.info("Fetching existing Req IDs from Notion databases...")
         existing_ids_db = nc.fetch_existing_req_ids(nc.DATABASE_ID)
-        existing_ids_applied = nc.fetch_existing_req_ids(nc.APPLIED_DATABASE_ID, company_filter="M&T Bank")
+        existing_ids_applied = nc.fetch_existing_req_ids(nc.APPLIED_DATABASE_ID, company_filter=institution["name"])
         existing_req_ids = existing_ids_db.union(existing_ids_applied)
         logging.info(f"Found {len(existing_req_ids)} total existing Req IDs.")
 
@@ -206,7 +205,7 @@ if __name__ == "__main__":
                 continue
 
             try:
-                NOTION_PAYLOAD = nc.create_notion_payload(job)  # This builds the page payload from a job dictionary
+                NOTION_PAYLOAD = nc.create_notion_payload(job, institution["name"])  # This builds the page payload from a job dictionary
                 notion_response = requests.post(nc.NOTION_API_URL, headers=nc.NOTION_HEADERS, json=NOTION_PAYLOAD)
 
                 if notion_response.status_code == 200:
