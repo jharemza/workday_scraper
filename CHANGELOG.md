@@ -7,9 +7,51 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 <!-- insertion marker -->
 
-## Unreleased
+## [v0.4.0](https://github.com/jharemza/workday_scraper/releases/tag/v0.4.0) - 2025-05-24
 
-<small>[Compare with latest](https://github.com/jharemza/workday_scraper/compare/v0.3.0...HEAD)</small>
+<small>[Compare with v0.3.0](https://github.com/jharemza/workday_scraper/compare/v0.3.0...v0.4.0)</small>
+
+### General Description
+
+---
+
+### Added in v0.4.0
+
+- YAML-based config system for multi-institution scraping
+- `config/institutions.yaml` with support for:
+  - `name`, `workday_url`, `locations`, `search_text`
+- New runner module `institution_runner.py` to handle per-institution logic
+- Separate output files for each institution in `json_output/`
+- Institution-aware logging and progress bars
+- Internal documentation added under `docs/v0.4.0_architecture.md`
+- Public-facing `README.md` with setup, config, and usage instructions
+
+### Fixed in v0.4.0
+
+- Ensured backward compatibility with M&T Bank scraping flow via isolated regression test
+
+### Specific Commits
+
+---
+
+### Features
+
+- Add `InstitutionRunner` with YAML-driven inputs ([100cdf5](https://github.com/jharemza/workday_scraper/commit/100cdf5))
+
+### Code Refactoring
+
+- Extract M&T-specific logic to config ([7ae416e](https://github.com/jharemza/workday_scraper/commit/7ae416e))
+
+### Chores
+
+- Add YAML config structure and parser ([5e98db1](https://github.com/jharemza/workday_scraper/commit/5e98db1))
+- Include institution name in logs and progress bars ([411eb7b](https://github.com/jharemza/workday_scraper/commit/411eb7b))
+- Ignore JSON output files in `.gitignore` ([77601b6](https://github.com/jharemza/workday_scraper/commit/77601b6))
+
+### Documentation
+
+- Add architecture reference for v0.4.0 abstraction ([9d45ce3](https://github.com/jharemza/workday_scraper/commit/9d45ce3))
+- Update README.md ([4d775f3](https://github.com/jharemza/workday_scraper/commit/4d775f3))
 
 ### Added
 
