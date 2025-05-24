@@ -49,7 +49,7 @@ def extract_salary_range(description):
         logging.debug("Salary pattern not found in job description.")
         return None, None
 
-def create_notion_payload(job):
+def create_notion_payload(job, company_name):
     # Extract salary
     description = job.get("jobDescription", "")
     base_pay_low, base_pay_high = extract_salary_range(description)
@@ -64,7 +64,7 @@ def create_notion_payload(job):
         "properties": {
             "Company": {
                 "title": [
-                    { "text": { "content": "M&T Bank" } }
+                    { "text": { "content": company_name } }
                 ]
             },
             "Position": {

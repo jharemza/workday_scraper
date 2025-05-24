@@ -1,0 +1,7 @@
+institutions:
+  - name: "M&T Bank"
+    workday_url: "https://mtb.wd5.myworkdayjobs.com/wday/cxs/mtb/MTB/jobs"
+    search_text: "sql"
+    locations:
+      - "Buffalo, NY"
+      - "Remote, USA"
