@@ -5,3 +5,13 @@ institutions:
     locations:
       - "Buffalo, NY"
       - "Remote, USA"
+
+  - name: "Bank of America"
+    workday_url: "https://ghr.wd1.myworkdayjobs.com/wday/cxs/ghr/Lateral-US/jobs"
+    search_text: "sql"
+
+  - name: "Citi"
+    workday_url: "https://citi.wd5.myworkdayjobs.com/wday/cxs/citi/2/jobs"
+    search_text: "sql"
+    locations:
+      - "Getzville New York United States"

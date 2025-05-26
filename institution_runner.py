@@ -48,7 +48,7 @@ def run_institution_scraper(institution: dict):
 
     # 1. Set local vars from config
     url = institution["workday_url"]
-    locations = institution["locations"]
+    locations = institution.get("locations", [])
     search_text = institution["search_text"]
     company_name = institution["name"]
 
@@ -70,12 +70,13 @@ def run_institution_scraper(institution: dict):
     facets = response.json().get("facets", [])
     location_ids = []
 
-    for loc in tqdm(locations, desc=f"{company_name}: Location facets", unit="loc"):
-        facet_param, loc_id = find_id_by_descriptor(facets, loc)
-        if loc_id:
-            location_ids.append(loc_id)
-        else:
-            log_with_prefix("error", company_name, f"Location '{loc}' not found in facets.")
+    if locations:
+        for loc in tqdm(locations, desc=f"{company_name}: Location facets", unit="loc"):
+            facet_param, loc_id = find_id_by_descriptor(facets, loc)
+            if loc_id:
+                location_ids.append(loc_id)
+            else:
+                log_with_prefix("error", company_name, f"Location '{loc}' not found in facets.")
 
     if not location_ids:
         log_with_prefix("warning", company_name, f"No location IDs found. Skipping.")
@@ -88,12 +89,16 @@ def run_institution_scraper(institution: dict):
     page_pbar = tqdm(desc=f"{company_name}: Pages scraped", unit="page")
 
     while True:
+
+        applied_facets = {}
+        if location_ids:
+            applied_facets["locations"] = location_ids
+
+
         job_payload = {
             "limit": limit,
             "offset": offset,
-            "appliedFacets": {
-                "locations": location_ids
-            },
+            "appliedFacets": applied_facets,
             "searchText": search_text
         }
 
