@@ -78,9 +78,9 @@ def run_institution_scraper(institution: dict):
             else:
                 log_with_prefix("error", company_name, f"Location '{loc}' not found in facets.")
 
-    if not location_ids:
-        log_with_prefix("warning", company_name, f"No location IDs found. Skipping.")
-        return
+    if locations and not location_ids:
+        log_with_prefix("warning", company_name, f"No valid location IDs matched descriptors. Skipping.")
+        return []
 
     # 3. Job collection
     offset = 0
