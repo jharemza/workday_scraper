@@ -1,10 +1,7 @@
-import requests
 import json
-import time
 import logging
 from logging.handlers import RotatingFileHandler
 from tqdm import tqdm
-import notion_client as nc
 from config_loader import load_institutions_config
 from institution_runner import run_institution_scraper
 
@@ -79,8 +76,10 @@ def find_id_by_descriptor(facets, target_descriptor):
 # --- Main Execution ---
 if __name__ == "__main__":
 
-    institution = load_institutions_config()[0]
-    results = run_institution_scraper(institution)
+    institutions = load_institutions_config()
+
+    for institution in tqdm(institutions, desc="Institutions", unit="org"):
+        results = run_institution_scraper(institution)
 
     # Write full job response to file. One file per institution.
     safe_name = institution["name"].replace(" ", "_").replace("&", "and")
