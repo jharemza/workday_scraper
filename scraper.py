@@ -81,10 +81,10 @@ if __name__ == "__main__":
     for institution in tqdm(institutions, desc="Institutions", unit="org"):
         results = run_institution_scraper(institution)
 
-    # Write full job response to file. One file per institution.
-    safe_name = institution["name"].replace(" ", "_").replace("&", "and")
-    filename = f"json_output/workday_response_{safe_name}.json"
-
-    with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(results, f, indent=4)
-    logging.info(f"Filtered job response saved to {filename}")
+        # Write full job response to file. One file per institution.
+        safe_name = institution["name"].replace(" ", "_").replace("&", "and")
+        filename = f"json_output/workday_response_{safe_name}.json"
+    
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(results, f, indent=4)
+        logging.info(f"Filtered job response saved to {filename}")
