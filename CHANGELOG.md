@@ -7,11 +7,54 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 <!-- insertion marker -->
 
+## [v0.5.0](https://github.com/jharemza/workday_scraper/releases/tag/v0.5.0) - 2025-05-30
+
+<small>[Compare with v0.4.0](https://github.com/jharemza/workday_scraper/compare/v0.4.0...v0.5.0)</small>
+
+### General Description - v0.5.0
+
+---
+
+### Added in v0.5.0
+
+- Multi-institution scraping support.
+  - Introduced config-based structure allowing multiple Workday institutions to be scraped in sequence.
+  - Added support for Notion filters by institution to prevent duplication.
+  - JSON output files are now generated for each institution.
+- Log output improvements with structured, institution-scoped entries.
+- Reorganized project for improved modularity (`run_institution_scraper`, config loader, etc.).
+
+### Fixed in v0.5.0
+
+- Resolved issue where only the last institution’s JSON file was being written.
+
+### Notes for v0.5.0
+
+- This version marks a major step toward scalable scraping and data consolidation across multiple organizations.
+
+### Specific Commits - v0.5.0
+
+---
+
+### Features
+
+- enable multi-institution scraping loop & removed unused imports from scraper.py ([348364b](https://github.com/jharemza/workday_scraper/commit/348364bff712a1a7a04f560d72301f83a2421a08) by Jeremiah Haremza).
+- add additional institutions to config file ([25b93ad](https://github.com/jharemza/workday_scraper/commit/25b93adda0c5187cfd910012e9cc3533ec778d2a) by Jeremiah Haremza).
+
+### Bug Fixes
+
+- write JSON output per institution during scraping loop ([43f76dd](https://github.com/jharemza/workday_scraper/commit/43f76ddbdfbe27d784e23f3a74a345afee22622e) by Jeremiah Haremza).
+- improve Notion deduplication and support no-location scrapes ([9bac9b1](https://github.com/jharemza/workday_scraper/commit/9bac9b1dc359c7cbf151a4b0e594e6cc09a023f7) by Jeremiah Haremza).
+
+### Docs
+
+- document v0.4.0 release changes ([26a8d79](https://github.com/jharemza/workday_scraper/commit/26a8d7958e7535b98d01c6916840848414039bf8) by Jeremiah Haremza).
+
 ## [v0.4.0](https://github.com/jharemza/workday_scraper/releases/tag/v0.4.0) - 2025-05-24
 
 <small>[Compare with v0.3.0](https://github.com/jharemza/workday_scraper/compare/v0.3.0...v0.4.0)</small>
 
-### General Description
+### General Description - v0.4.0
 
 ---
 
@@ -30,7 +73,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Ensured backward compatibility with M&T Bank scraping flow via isolated regression test
 
-### Specific Commits
+### Specific Commits - v0.4.0
 
 ---
 
