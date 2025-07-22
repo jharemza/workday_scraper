@@ -15,3 +15,7 @@ institutions:
     search_text: "sql"
     locations:
       - "Getzville New York United States"
+
+  - name: "KeyBank"
+    workday_url: "https://keybank.wd5.myworkdayjobs.com/wday/cxs/keybank/External_Career_Site/jobs"
+    search_text: "sql"
