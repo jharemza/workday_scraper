@@ -1,0 +1,15 @@
+[tool.git-changelog]
+bump = "auto" # Set
+convention = "conventional" # Set
+in-place = false # Set - change to true after first run
+marker-line = "<!-- insertion marker -->" # Set
+output = "Generated_Changelog.md" # Set
+parse-refs = true # Set - can change
+parse-trailers = true # Set - can change
+provider = "github" # Set
+repository = "." # Set
+sections = ["feat", "fix", "chore", "docs", "style", "refactor", "perf", "test"] # Set
+template = "keepachangelog" # Set
+version-regex = "^## \\\\[(?P<version>v?[^\\\\]]+)" # Set
+versioning = "semver" # Set
+zerover = true # Set
