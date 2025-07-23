@@ -94,7 +94,6 @@ def run_institution_scraper(institution: dict):
         if location_ids:
             applied_facets["locations"] = location_ids
 
-
         job_payload = {
             "limit": limit,
             "offset": offset,
@@ -108,7 +107,9 @@ def run_institution_scraper(institution: dict):
             log_with_prefix("error", company_name, f"Failed to fetch jobs.")
             break
 
-        jobs = response.json().get("jobPostings", [])
+        json_data = response.json()
+        total = json_data.get("total", 0)
+        jobs = json_data.get("jobPostings", [])
         jobs_data = [
             f"{url.rsplit('/jobs', 1)[0]}/job/{job.get('externalPath', '').split('/')[-1]}"
             for job in jobs if "externalPath" in job
@@ -121,7 +122,7 @@ def run_institution_scraper(institution: dict):
         offset += limit
         page_pbar.update(1)
 
-        if len(jobs) < limit:
+        if offset >= total:
             break
 
         time.sleep(0.5)
