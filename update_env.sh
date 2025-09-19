@@ -14,8 +14,6 @@ if [[ "$OS_NAME" == *"linux"* ]]; then
         eval "$(conda shell.bash hook)"
     fi
 
-    LOG_FILE="${LOG_DIR}/environment_linux_${DATE_TAG}.yml"
-
     mkdir -p "$LOG_DIR"
 
     echo "[INFO] Exporting conda environment: $ENV_NAME"
