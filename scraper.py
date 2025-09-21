@@ -1,7 +1,9 @@
 import json
 import logging
 from logging.handlers import RotatingFileHandler
+
 from tqdm import tqdm
+
 from config_loader import load_institutions_config
 from institution_runner import run_institution_scraper
 
@@ -34,45 +36,6 @@ HEADERS = {
 }
 
 # --- Function to Find Location IDs ---
-# --- Function to Find ID by Descriptor (General Purpose) ---
-def find_id_by_descriptor(facets, target_descriptor):
-    """
-    Recursively find the ID and facetParameter for a given descriptor across Workday facetParameters.
-
-    Args:
-        facets (list): The facets list loaded from JSON.
-        target_descriptor (str): The descriptor text to search for.
-
-    Returns:
-        tuple: (facetParameter, id) if found, or (None, None) if not found.
-    """
-    target_descriptor = target_descriptor.strip().lower()
-
-    for facet in facets:
-        facet_parameter = facet.get("facetParameter", "")
-        values = facet.get("values", [])
-
-        for value in values:
-            # Check if this value directly matches
-            descriptor = value.get("descriptor", "").strip().lower()
-            if descriptor == target_descriptor and "id" in value:
-                return facet_parameter, value["id"]
-
-            # If value has nested facetParameter + values, recurse
-            if "facetParameter" in value and "values" in value:
-                nested_facet_parameter = value["facetParameter"]
-                nested_values = value["values"]
-
-                found_facet_parameter, found_id = find_id_by_descriptor(
-                    [{"facetParameter": nested_facet_parameter, "values": nested_values}],
-                    target_descriptor
-                )
-
-                if found_id:
-                    return found_facet_parameter, found_id
-
-    return None, None
-
 # --- Main Execution ---
 if __name__ == "__main__":
 
