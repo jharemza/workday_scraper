@@ -1,44 +1,11 @@
-import notion_client as nc
-import requests
 import logging
 import time
+
+import notion_client as nc
+import requests
 from tqdm import tqdm
 
-def find_id_by_descriptor(facets, target_descriptor):
-    """
-    Recursively find the ID and facetParameter for a given descriptor across Workday facetParameters.
-
-    Args:
-        facets (list): The facets list loaded from JSON.
-        target_descriptor (str): The descriptor text to search for.
-
-    Returns:
-        tuple: (facetParameter, id) if found, or (None, None) if not found.
-    """
-    target_descriptor = target_descriptor.strip().lower()
-
-    for facet in facets:
-        facet_parameter = facet.get("facetParameter", "")
-        values = facet.get("values", [])
-
-        for value in values:
-            descriptor = value.get("descriptor", "").strip().lower()
-            if descriptor == target_descriptor and "id" in value:
-                return facet_parameter, value["id"]
-
-            if "facetParameter" in value and "values" in value:
-                nested_facet_parameter = value["facetParameter"]
-                nested_values = value["values"]
-
-                found_facet_parameter, found_id = find_id_by_descriptor(
-                    [{"facetParameter": nested_facet_parameter, "values": nested_values}],
-                    target_descriptor
-                )
-
-                if found_id:
-                    return found_facet_parameter, found_id
-
-    return None, None
+from utils import find_id_by_descriptor
 
 def log_with_prefix(level, company_name, message):
     getattr(logging, level)(f"[{company_name}] {message}")
